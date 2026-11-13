@@ -41,6 +41,14 @@ and the GL/EGL/audio/input bindings for it.
 If you want to understand *how* recompilation works, read their repo first. This
 project is a layer on top.
 
+**Snapshot caveat.** This fork was taken on **2026-11-01**. Upstream has released
+`v0.1.2-alpha` (2026-11-06) and `v0.2.0-alpha` (2026-11-13) since. Those releases
+are almost entirely `host_vita_*` and `gl_vita_backend*` work — Vita-specific, not
+applicable to an Android gl4es host. Do not assume their bug list and ours match:
+they fixed endings and Chinese font atlases for Vita, and neither fix lives in a
+file this project uses. Re-diff `recomp/runtime` before porting anything from
+their tree.
+
 ---
 
 ## 2. What was added on top of upstream
