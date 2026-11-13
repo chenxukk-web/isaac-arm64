@@ -87,6 +87,9 @@ mostly dead weight — see `PITFALLS.md` §1 for how that was discovered.
 **Verified on exactly one device.** Other GPUs are unknown. If you test on
 something else, that is genuinely new information.
 
+**Demo recording (3 min):** https://youtu.be/V-F3hw618yU — real device, no edits.
+It shows both known defects as they actually look.
+
 The 58-60 fps figure comes from a build before 2026-11-12. The current build
 carries diagnostic probes added while chasing the font-atlas bug, and measures
 slower. Removing the probes should recover roughly 3 fps; that was never measured.

@@ -193,7 +193,7 @@ Read PITFALLS.md once. It saves two weeks.
 
 ## 2. Discord — main message
 
-Discord caps a message at 2000 characters; this block is 1701, so it fits with
+Discord caps a message at 2000 characters; this block is 1731, so it fits with
 room to spare. Send this on its own and wait for reactions before posting
 anything else — three messages in a row reads as spam.
 
@@ -209,7 +209,7 @@ copy of Repentance v1.7.9b (J835).
 **Upstream:** built on repentogxm, the PS Vita port (GPL-2.0):
 https://github.com/0xl0cal/repentogxm
 
-**Repository (both languages):**
+**Repository (both languages, includes a 3 min device demo):**
 https://github.com/chenxukk-web/isaac-arm64
 
 **Measured on one device** (Adreno 830 / Android 17): 56.9 fps median over 142

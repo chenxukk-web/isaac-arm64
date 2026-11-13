@@ -167,7 +167,7 @@ PITFALLS.md 读一遍，省两周。
 
 ## 2. Discord 主条
 
-Discord 单条上限 2000 字符，这段 987 字符，余量很大。先只发这一条，等
+Discord 单条上限 2000 字符，这段 998 字符，余量很大。先只发这一条，等
 回应再决定要不要展开——连着发三条会被当成刷屏。
 
 ```
@@ -182,7 +182,7 @@ v1.7.9b（J835）。
 **上游：** 本项目建立在上游 repentogxm（PS Vita 移植版，GPL-2.0）之上：
 https://github.com/0xl0cal/repentogxm
 
-**仓库（中英双语）：**
+**仓库（中英双语，含 3 分钟真机演示）：**
 https://github.com/chenxukk-web/isaac-arm64
 
 **实测（单设备 Adreno 830 / Android 17）：** 142 个采样中位 56.9 fps，冷启动
@@ -238,7 +238,7 @@ Lua 5.3.3 头文件、gl4es 的 `libGL.a`。刚解压时验证：
 **还得自备** `resources/packed/*.a`（22 个归档，约 1.0 GiB）和
 `isaac-ng.exe`，否则起不来。清单见 `DISTRIBUTION.md`。
 
-**仓库（中英双语）：**
+**仓库（中英双语，含 3 分钟真机演示）：**
 https://github.com/chenxukk-web/isaac-arm64
 
 **为什么放弃：** 一台手机跑 Termux，没 PC 没 CI。每次改动要重编 192 个单元

@@ -145,6 +145,10 @@ replaced — no reinstall.
 
 **Verified on exactly one device.** Other GPUs are unknown.
 
+**Demo recording (3 min, real device):** https://youtu.be/V-F3hw618yU
+— recorded on the device above. It shows the defects in §"Two known defects"
+exactly as they look: HUD digits rendering as `µ`, blank menu list.
+
 A 58-60 fps best case was measured on a build from before 2026-11-12. The current
 build carries diagnostic probes added that day and measures slower; §3 of
 `LIMITATIONS.md` records the evidence and the fix (rebuild without the probes).
