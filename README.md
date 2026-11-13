@@ -326,11 +326,14 @@ build artifacts.
 
 ## Source language status (2026-11-12)
 
-This archive ships **two source trees** that build to functionally identical
+This project ships **two source trees** that build to functionally identical
 `.so` files — comments never enter the artifact:
 
-- `isaac-arm64-en/` (this one) — English throughout wherever it matters.
-- `isaac-arm64-zh/` — identical code, Chinese working notes.
+- **the repository root** (English) — English throughout wherever it matters.
+- **`zh/`** — identical code, Chinese working notes.
+
+(The release archive splits them into `isaac-arm64-en/` and `isaac-arm64-zh/`
+instead; the contents are the same.)
 
 Verified by compiling the same file both ways (`clang -O2 -fPIC`) and comparing
 object files: every file translated in the second pass produces a
@@ -364,7 +367,7 @@ comment lines) are fully translated — `host_gl4es.c` (721), `host_user32.c`
 Checked mechanically, not by eye:
 
 ```
-cd isaac-arm64-en
+cd <repo-or-archive>/            # the English tree
 grep -rlP '[\x{4e00}-\x{9fff}]' .      # no output
 ```
 

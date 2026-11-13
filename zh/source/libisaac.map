@@ -1,0 +1,16 @@
+/* 只导出 JNI 入口，其余全部隐藏。
+ *
+ * 为什么这是必须的：-rdynamic 会导出全部 15514 个符号（包括 4.66M 行
+ * 生成代码里的每一个 sub_XXXXXXX）。用 dlopen 装进 App 进程后，这些名字
+ * 会和 ART、系统库以及其他 .so 混在一起：
+ *   · 查找变慢（动态链接器必须哈希一张巨大的符号表）
+ *   · 一旦撞名（比如某个 sub_ 名字，或者 C++ 的 _Z* 修饰名），可能解析
+ *     到别人的函数上
+ * version script 把可见性收窄到只剩 JNI 入口。
+ * 库自己的 main / host_* / sub_* 依然是 local，彼此调用照常工作。 */
+{
+  global:
+    Java_com_isaacport_launcher_*;
+  local:
+    *;
+};

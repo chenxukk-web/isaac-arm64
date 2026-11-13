@@ -62,8 +62,8 @@ never will be: no game code, no resources, no generated translation units.
 You build it yourself, and you must own a legitimate PC copy of Repentance
 v1.7.9b (J835). See DISTRIBUTION.md for exactly what you have to supply.
 
-  DOWNLOAD (both trees, 1.04 MB):
-  https://mega.nz/file/TO5QFQjS#5lYOGYOoCduRWWZH1z4daEUQWKrZVeDlsJAOfoRnzqE
+  REPOSITORY (both languages):
+  https://github.com/chenxukk-web/isaac-arm64
 
 Upstream project this is built on — the PS Vita port, GPL-2.0, still the best
 reference for how the recompilation works:
@@ -108,7 +108,7 @@ either, and I would rather say that up front than let people discover it.
   LIMITATIONS.md   what was NOT settled — with commands to verify each
   BUILD_SPEC_FOR_AGENTS.md   the build pipeline, written so an agent or a
                    human can follow it without guessing
-  Two trees, isaac-arm64-en/ and isaac-arm64-zh/. The code is identical;
+  Two versions, English and Chinese (zh/). The code is identical;
                    only comment and document language differs. Verified by
                    compiling all 20 host files from both trees and comparing
                    objects — byte-identical, 20/20. Comments never enter the
@@ -193,7 +193,7 @@ Read PITFALLS.md once. It saves two weeks.
 
 ## 2. Discord — main message
 
-Discord caps a message at 2000 characters; this block is 1734, so it fits with
+Discord caps a message at 2000 characters; this block is 1701, so it fits with
 room to spare. Send this on its own and wait for reactions before posting
 anything else — three messages in a row reads as spam.
 
@@ -209,8 +209,8 @@ copy of Repentance v1.7.9b (J835).
 **Upstream:** built on repentogxm, the PS Vita port (GPL-2.0):
 https://github.com/0xl0cal/repentogxm
 
-**Download (both trees, 1.04 MB):**
-https://mega.nz/file/TO5QFQjS#5lYOGYOoCduRWWZH1z4daEUQWKrZVeDlsJAOfoRnzqE
+**Repository (both languages):**
+https://github.com/chenxukk-web/isaac-arm64
 
 **Measured on one device** (Adreno 830 / Android 17): 56.9 fps median over 142
 samples, ~18.7 s cold start, no crashes. Other GPUs unknown.
@@ -247,8 +247,8 @@ message.
 ```
 **More detail**
 
-Identical code in `isaac-arm64-en/` and `isaac-arm64-zh/` — only comment and doc
-language differ (20/20 host files compile to byte-identical objects).
+Identical code in English and Chinese (`zh/`) — only comment and doc language
+differ (20/20 host files compile to byte-identical objects).
 
 **Not an emulator wrapper,** not MobileGlues/Box64 — tried and rejected,
 `PITFALLS.md` explains why.
@@ -266,8 +266,8 @@ Lua 5.3.3 headers, and gl4es's `libGL.a`. On a fresh unpack:
 **You must also supply** `resources/packed/*.a` (22 archives, ~1.0 GiB) and
 `isaac-ng.exe`, or it won't start. See `DISTRIBUTION.md`.
 
-**Download (both trees, 1.04 MB):**
-https://mega.nz/file/TO5QFQjS#5lYOGYOoCduRWWZH1z4daEUQWKrZVeDlsJAOfoRnzqE
+**Repository (both languages):**
+https://github.com/chenxukk-web/isaac-arm64
 
 **Provenance, plainly.** All the documents are AI-written, across many sessions,
 from this project's device logs and source. The logs are real; the numbers trace
