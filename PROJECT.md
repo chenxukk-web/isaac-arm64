@@ -51,6 +51,21 @@ their tree.
 
 ---
 
+## 1a. If you just want to play it on Android, use this instead
+
+**There is a maintained, playable Android version of this game, and it is not
+this project.** [`YakutsukuriYuu/Isaac-Repentance`](https://github.com/YakutsukuriYuu/Isaac-Repentance)
+targets the same game build (1.7.9b.J835), ships installable builds for Android,
+iOS and macOS plus a browser build, imports saves and mods, and is actively
+released — 0.1.16 at the time of writing.
+
+That project runs the game as **WebAssembly**; this one **statically recompiles
+the x86 binary to native ARM64**. Different technical routes to the same goal.
+
+So: if your question is "how do I play Isaac on my phone", the answer is their
+project, not this one. This one is worth reading only if you care how the
+recompilation route works — and it stops at source, because it was abandoned.
+
 ## 2. What was added on top of upstream
 
 | Layer | Files | What it does |
