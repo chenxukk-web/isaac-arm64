@@ -1,0 +1,17 @@
+/* Export only the JNI entry points; hide everything else.
+ *
+ * Why this is mandatory: -rdynamic exports all 15514 symbols (including every
+ * sub_XXXXXXX from 4.66M lines of generated code). After dlopen into an app
+ * process those names mix with ART, system libraries and other .so files:
+ *   . lookups slow down (the dynamic linker must hash a huge symbol table)
+ *   . a collision (e.g. a sub_ name, or a C++ _Z* mangling) could resolve to
+ *     someone else's function
+ * A version script reduces visibility to the JNI entry points only.
+ * The library's own main / host_* / sub_* are all local and still call each
+ * other normally. */
+{
+  global:
+    Java_com_isaacport_launcher_*;
+  local:
+    *;
+};

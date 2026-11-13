@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# The game's own material. Never commit these; they are the publisher's.
+# See DISTRIBUTION.md.
+# ---------------------------------------------------------------------------
+isaac-ng.exe
+isaac-ng.exe.unpacked
+isaac-ng.exe.unpacked.*
+resources/
+*.a
+
+# Saves, keys, workshop content
+Documents/
+achievements.xml
+players.xml
+persistentgamedata*.dat
+*.stamp
+
+# ---------------------------------------------------------------------------
+# Generated translation units: 192 files, 4.67M lines, ~213 MB.
+# GPL requires the *means* to regenerate them (tools + your own PE), not the
+# output. Upstream excludes guest_####.c for the same reason.
+# ---------------------------------------------------------------------------
+gen/
+guest_0*.c
+guest_table.c
+
+# ---------------------------------------------------------------------------
+# Build outputs
+# ---------------------------------------------------------------------------
+obj/
+obj_o2/
+obj_pic/
+obj_trace/
+luapic/
+luaobj/
+build/
+out/
+*.o
+*.so
+*.so.*
+*.apk
+*.idsig
+*.dex
+*.class
+
+# ---------------------------------------------------------------------------
+# Logs, dumps, captures
+# ---------------------------------------------------------------------------
+*.log
+*.err
+*.txt.bak
+app_maps.txt
+inproc_maps.txt
+frames/
+*.ppm
+*.png
+*.jpg
+*.jpeg
+*.mp4
+*.mov
+
+# ---------------------------------------------------------------------------
+# Editor / OS noise
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*~
+*.swp
+__pycache__/
+*.pyc
+.venv/
