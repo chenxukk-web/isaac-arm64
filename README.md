@@ -1,4 +1,4 @@
-# The Binding of Isaac: Repentance — Android arm64 Static Recompilation
+# Isaac: Repentance → Android arm64
 
 A full static recompilation of the PC engine of *The Binding of Isaac:
 Repentance* (x86 PE32) into native Android arm64 code. **Not an emulator** —
