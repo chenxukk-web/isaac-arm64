@@ -5,6 +5,26 @@ Repentance* (x86 PE32) into native Android arm64 code. **Not an emulator** —
 15,071 x86 functions are translated to C at build time and cross-compiled into
 a native `.so`.
 
+**Status: it boots, plays, and fights — with two visible defects.** Frame rate is
+56.9 fps median over 142 samples; the HUD font atlas fails to upload, and dense
+rooms drop frames. Both root causes are documented below.
+
+## What it looks like on a phone
+
+| 2026-11-06 build (HUD working) | 2026-11-13 build (HUD broken) |
+|---|---|
+| <img src="docs/screenshots/room-20261106-ok.png" width="430"> | <img src="docs/screenshots/room-20261113-defect.jpg" width="430"> |
+| HUD counters render: `00 01 00` | Every HUD counter is `µ` — defect #1 |
+| Same room type, same device | `starting...` never hides; 38 fps, 95% CPU in this frame |
+
+Both frames come from the same phone (Adreno 830 / Android 17). The room, the
+sprites and the player render correctly in both — what regressed between them is
+the font atlas upload, not the renderer.
+
+**3-minute demo on a real device:** https://youtu.be/V-F3hw618yU
+
+---
+
 > **Maintenance status: the original author has stopped maintaining this.**
 > It is released in this state for others to take over, build, and improve.
 > Everything below is a measured snapshot from one point in time, not a promise.

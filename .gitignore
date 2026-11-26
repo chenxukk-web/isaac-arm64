@@ -58,6 +58,9 @@ frames/
 *.jpeg
 *.mp4
 *.mov
+# Keep the README screenshots: they are the only visual evidence in this archive.
+!docs/screenshots/*.png
+!docs/screenshots/*.jpg
 
 # ---------------------------------------------------------------------------
 # Editor / OS noise
