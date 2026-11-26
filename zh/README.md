@@ -7,6 +7,10 @@
 **现状：能启动、能玩、能打——但有两个看得见的缺陷。** 142 个采样中位帧率
 56.9 fps；HUD 字体图集上传失败，密集房间会掉帧。两个根因都写在下面。
 
+**发布：** [v0.1.0-alpha](https://github.com/chenxukk-web/isaac-arm64/releases/tag/v0.1.0)
+——仅有源码，预发布。GitHub 侧栏对预发布只显示 `1 tag` 并链到 `/tags`
+而不是 `/releases`，所以要看发布说明请走这个链接。
+
 ## 在手机上是什么样子
 
 <img src="../docs/screenshots/room-running-20261113.webp" width="720" alt="实机七秒：角色走到门口并换房间">

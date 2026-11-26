@@ -9,6 +9,10 @@ a native `.so`.
 56.9 fps median over 142 samples; the HUD font atlas fails to upload, and dense
 rooms drop frames. Both root causes are documented below.
 
+**Release:** [v0.1.0-alpha](https://github.com/chenxukk-web/isaac-arm64/releases/tag/v0.1.0)
+— source only, pre-release. GitHub's sidebar shows `1 tag` for a pre-release and
+links to `/tags`, not `/releases`, so use this link to reach the release notes.
+
 ## What it looks like on a phone
 
 <img src="docs/screenshots/room-running-20261113.webp" width="720" alt="Seven seconds on device: the player walks to a door and changes rooms">
