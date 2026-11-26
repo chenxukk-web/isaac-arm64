@@ -11,6 +11,12 @@ rooms drop frames. Both root causes are documented below.
 
 ## What it looks like on a phone
 
+<img src="docs/screenshots/room-running-20261113.webp" width="720" alt="Seven seconds on device: the player walks to a door and changes rooms">
+
+Seven seconds captured on device. The player walks, changes rooms, and the frame
+rate moves between 44 and 58 fps. Two defects are visible the whole time: every
+HUD counter reads `µ` instead of a number, and `starting...` never hides.
+
 | 2026-11-06 build (HUD working) | 2026-11-13 build (HUD broken) |
 |---|---|
 | <img src="docs/screenshots/room-20261106-ok.png" width="430"> | <img src="docs/screenshots/room-20261113-defect.jpg" width="430"> |
@@ -22,6 +28,13 @@ sprites and the player render correctly in both — what regressed between them 
 the font atlas upload, not the renderer.
 
 **3-minute demo on a real device:** https://youtu.be/V-F3hw618yU
+
+---
+
+**How this was made:** AI-assisted throughout, directed by a human who ran every
+device test. Documents and code changes were written by an AI from logs and
+source; no AI ever installed this on a device. If a claim here conflicts with
+what you measure, trust your measurement.
 
 ---
 
