@@ -134,12 +134,17 @@ time (addresses, logs, numbers):
 
 ## ★ Startup time has its own document
 
-`STARTUP_AND_ARCHIVES.md` covers the one performance question that is fully
-measured: where the ~17.5 s of startup goes, the `ARCH000` container format
-recovered from the retail archives, and a repack that cuts startup to **8 s** —
-measured — but crashes on a pre-existing memory bug that the change in file sizes
-exposes. It also documents that **nothing is cached**: every start re-inflates the
-same 1.2 GB as translated x86, at 7x the cost of native zlib.
+`STARTUP_AND_ARCHIVES.md` covers where the ~17.5 s of startup goes, the
+`ARCH000` container format, and a repack that reaches **8 s** — measured, but
+**not shippable**: it turns plaintext into `0x400` chunks, which the game
+decrypts, so the data comes out as noise (§3.0 records how that was found and
+corrects an earlier claim in the same document). Startup is also uncached: every
+start re-inflates the same 1.2 GB as translated x86, at 7x native zlib.
+
+The same document now includes a verifier (`tools/archives/verify_archives.c`)
+that recomputes each archive's own fold checksum, which is how the decoding was
+graded: mode `0x00` 2701/2701 correct, mode `0x01` 46/48, mode `0x02`
+1531/4180 — the gap being exactly the `0x400` chunks.
 
 Read it if you intend to touch startup, archives, or the resource layer.
 

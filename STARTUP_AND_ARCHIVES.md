@@ -98,7 +98,7 @@ Three codecs, selected by the mode byte:
 |---|---|---|
 | `0x00` | graphics, music, sfx, videos | Bogocrypt1: XOR + conditional swaps + key schedule. Symmetric. |
 | `0x01` | config, fonts, rooms, animations | LZW: dictionary persists across the 4-byte-prefixed chunks of one entry; width grows before each read. |
-| `0x02` | afterbirth*, repentance*, all language packs | 4-byte length prefix + raw DEFLATE (`wbits=-15`); a chunk of length exactly `0x400` is **stored verbatim**. |
+| `0x02` | afterbirth*, repentance*, all language packs | 4-byte length prefix + raw DEFLATE (`wbits=-15`); a chunk of length exactly `0x400` is **encrypted**, not stored — see the correction in §3.0. |
 
 ### 2.1 Name resolution
 
@@ -151,9 +151,63 @@ all-lowercase. This is a lead worth following and has **not** been tested.
 
 ## 3. Repacking so the game never inflates — measured, blocked
 
-The game has a native "no decompression" path: a chunk of length exactly `0x400`
-is copied verbatim. Verified in the translated code of the mode-`0x02` chunk
-loop (`gen/guest_0172.c`, function containing RVA `0x59c341`):
+### 3.0 Correction: the `0x400` chunk is encrypted, not stored
+
+**This section previously claimed a `0x400` chunk is stored verbatim. That is
+wrong, and the repack built on it would corrupt data.** Kept here because the
+mistake is instructive and because anyone reading the earlier revision needs to
+know.
+
+The chunk loop does have a fast path for length `0x400` (see the disassembly
+below), but the fast path **decrypts**. It calls two functions:
+
+```
+0059c412  call sub_005ec14c
+0059c422  call sub_005b06f0
+```
+
+`sub_005b06f0` is a PRNG-keyed XOR loop — 42 instructions, and the body advances a
+state and indexes a key table per word:
+
+```
+005b0715  mov ecx, dword ptr [eax]
+005b0717  mov eax, dword ptr [ecx]
+005b0719  mov edx, dword ptr [ecx + eax*4 + 4]
+```
+
+The upstream OhOS port identifies the same address as `isaac_archive_xor_try`, its
+decryption entry point, so this is not an inference from shape alone.
+
+**Decisive experiment.** Splitting `repentance.a`'s entries by whether they
+contain a `0x400` chunk, and checking each against the archive's own fold
+checksum:
+
+```
+entries that are pure DEFLATE        1531 / 1531 pass
+entries containing a 0x400 chunk        0 /   29 pass
+```
+
+Same decoder, same code path — the only difference is the `0x400` chunk. If those
+chunks were plaintext the second row would pass too.
+
+**What this means for §3.1 and §3.2.** The repack converts DEFLATE chunks into
+`0x400` chunks holding their plaintext output. Since the game decrypts every
+`0x400` chunk it reads, that plaintext is decrypted a second time and comes out as
+noise. The byte-for-byte comparison in §3.1 could not catch this: both sides were
+read with the same decoder, which treats `0x400` as plaintext, so they agreed with
+each other while both disagreed with the game.
+
+The measured 8-second startup in §3.2 still stands as a timing result — the
+game's `inflate` calls really do disappear — but **the repack is not
+data-correct and must not be shipped as-is.** Decrypting those chunks is
+unfinished work; the PRNG seeding was not recovered here.
+
+---
+
+### 3.0a The disassembly that produced the wrong conclusion
+
+The game has a chunk loop with a fast path for length exactly `0x400`. Verified in
+the translated code (`gen/guest_0172.c`, function containing RVA `0x59c341`):
 
 ```
 0059c39e  mov al, byte ptr [edx + 0x10]   ; already-decoded flag
@@ -190,7 +244,16 @@ afterbirthp.a     5,512 entries    identical 5,512    differing 0
 repentance_zh.a     943 entries    identical   943    differing 0
 ```
 
-Content is unchanged. Only the storage form differs.
+**This check cannot establish what it was written to establish.** Both sides were
+read with the same decoder, and that decoder treats `0x400` chunks as plaintext (the
+error corrected in §3.0). So the comparison proves the two archives look identical
+*to that decoder*, which they trivially do: the repack moves bytes from one chunk
+type to another, and a reader that ignores the difference between the two types
+cannot see the move. It does not prove the game reads them as the same data.
+
+What would actually settle it: decrypt the `0x400` chunks correctly, then compare.
+That requires the PRNG seeding, which was not recovered. Until then the repack is
+a timing experiment, not a shippable change.
 
 ### 3.2 Result on device
 
@@ -275,10 +338,16 @@ without discarding the translation.
 
 - Startup baseline is 16.4-21.2 s across runs; 17.5 s sits in `inflate()`.
 - Native zlib does the same work in 2.5 s; the translation layer costs 7×.
-- 97.1% of deflate chunks inflate to exactly 1024 bytes; the game copies such
-  chunks without inflating.
-- Repacking those chunks preserves every entry byte-for-byte (4 archives,
-  13,282 entries compared).
+- 97.1% of deflate chunks inflate to exactly 1024 bytes.
+- A `0x400` chunk is **decrypted**, not copied: pure-DEFLATE entries pass the
+  fold checksum 1531/1531, entries containing a `0x400` chunk pass 0/29.
+- The fold checksum is `rotr32(s,1) + word` from `0xababeb98`, with the `0x200`
+  staging area cleared only once so a short final chunk keeps the previous
+  chunk's trailing bytes. Getting that detail wrong scores 55/200 instead of
+  200/200.
+- With that checksum: mode `0x00` decodes correctly for **2701/2701** entries
+  (graphics, music, sfx, videos) and mode `0x01` for **46/48** (config 24/24,
+  fonts 10/10, rooms 12/13, animations 0/1).
 - A full repack cuts startup to 8 s **and** crashes during input setup.
 - There is no cache between starts.
 
@@ -287,6 +356,12 @@ without discarding the translation.
 - The crash is attributed to a pre-existing out-of-bounds write and a separate
   double-free; nobody has located the writing instruction.
 - A repack has never completed a full session without crashing.
+- **The repack is not data-correct.** It turns plaintext into `0x400` chunks,
+  which the game then decrypts, so the result is noise. The PRNG seeding for
+  those chunks was not recovered; until it is, the repack is a timing result
+  only. See §3.0.
+- mode `0x02` decoding is therefore incomplete: only entries without a `0x400`
+  chunk verify (1531/4180 in `repentance.a`).
 - The `.fnt`-language mismatch described in §2.2 has not been tested.
 - 1,846 entries (8.2%) have no resolved name; `rooms.a` and `animations.a` decode
   incompletely (12/13 and 0/1).
