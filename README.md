@@ -283,13 +283,38 @@ confirmed real defect is the font atlas:
 [alphachk] id=83 512x128 rgb_nonzero=0 alpha_nonzero=0 -> decoder wrote nothing (all zero)
 ```
 
-Six hypotheses have been ruled out (the data layer was compared byte-for-byte
-against an independent PNG decoder: 65062 == 65062 non-zero bytes, proving
-decoding is completely correct).
+**Correction (2026-11-27): the earlier "seventh path" lead was wrong.** This
+section used to say the font atlas uploads through an un-instrumented site,
+because the recorded return address `0x5b0a13` matched none of the six known
+`SetTexelData` call sites. That was a misreading of what the diagnostic records:
+`0x5b0a13` is the return address of the `glTexImage2D` call **inside**
+`SetTexelData`, not a caller of it. The upload path was known all along; the open
+question is the data handed to it.
 
-**Current lead**: the font atlas uploads with return address `0x5b0a13`, but it
-is **not** among the 6 known `SetTexelData` call sites (4 of those 6 have a
-count of 0). So there is a seventh path that has never been instrumented.
+What the improved probe established instead, by attributing every all-zero
+upload to a loader:
+
+```
+[zerotex] id=83 512x128 from=solid fill caller=005b606e nonzero=0/262144
+```
+
+- `caller=005b606e` is inside the **ImageSolid constructor** — a `rep stosd` fill
+  loop — not a PNG decoder. Of 39 attributed all-zero uploads, 31 come from this
+  path.
+- Most of them are legitimate: a solid image filled with transparent black *is*
+  all zero. Only three all-zero textures are ever drawn (ids 11, 13, 95), so the
+  "19.5% of textures are broken" framing above counts placeholders as failures.
+- `id=83 512x128` is the **only 512x128 upload in the whole run**, which is
+  exactly the size of `teammeatfont16_0.png`. The PNG on disk is intact
+  (verified by decoding it), yet nothing fills the texture afterwards:
+  `glTexSubImage2D` is called zero times.
+
+**So the question is narrower:** the game creates an empty 512x128 solid for the
+font atlas and never populates it. Either the decoder step is skipped or it
+writes elsewhere. `STARTUP_AND_ARCHIVES.md` §2.2 has a further lead — the `.fnt`
+inside `fonts.a` is the English original while the loose copy is a Chinese
+localisation, and the correct 512x128 PNG lives in an encrypted `0x400` chunk
+that does not decode.
 
 ### 2. Frame drops in dense rooms
 
