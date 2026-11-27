@@ -264,12 +264,24 @@ Consequences:
 - **Mods requiring REPENTOGON or other native PC extensions** need those
   extensions ported as well. They are not part of this project.
 
-### 4a. Host-layer limits that hit every mod at once — **fixed 2026-11-27**
+### 4a. Host-layer limits that hit every mod at once — **fix written, not applied**
 
 Three defects in the Windows file APIs applied to *all* mods, not just some.
-All three are fixed in `host_android.c`; the section is kept because the
-diagnostics below are how they were found, and because the fix has not yet been
-validated with a real mod on device (see the end of this section).
+A fix for all three was written and unit-tested off-device (24 assertions), then
+**reverted before it ever reached the repository**: `host_android.c` is unchanged
+since the initial import and still reads `#define FIND_MAX 8`. The section is kept
+because the diagnostics below are how the defects were found, and because the
+patch itself is worth reapplying.
+
+**Status correction (2026-11-27):** an earlier revision of this file said "fixed
+2026-11-27". That was wrong. The code change was rolled back while isolating an
+unrelated startup crash, and the document was not updated to match. Verify against
+the source before trusting any "fixed" label here:
+
+```
+grep -n 'define FIND_MAX' source/host_android.c     # reads 8, not 32
+grep -c '0xFFFD'          source/host_android.c     # reads 0
+```
 
 **1. Non-ASCII names were corrupted in both directions.** The two conversion
 helpers had been byte-wise, not UTF-8 aware:
@@ -288,24 +300,29 @@ UTF-8 (6 bytes) -> 6 UTF-16 code points: U+00E6 U+0088 U+0091 U+00E7 U+009A U+00
 ```
 
 Any mod whose directory name contained non-ASCII characters could not be found
-or opened. Both directions are now complete converters: the BMP, surrogate
+or opened. The patch converts both directions completely: the BMP, surrogate
 pairs, and lone surrogates mapped to U+FFFD so a damaged name stays
 distinguishable from one that genuinely contains `?`.
 
 **2. Only 8 directory handles could be open at once.** `#define FIND_MAX 8` with
 static `DIR *g_find_dir[8]`. A mod recursing through subdirectories while the
 engine was already enumerating could exhaust this and get a spurious failure.
-Now 32.
+The patch raises it to 32.
 
 **3. Wildcards were limited to `*` and `*.ext`.** Measured: `*abc*`, `a?c` and
 `[ab]c` never matched. The engine only ever used the two simple forms, but a mod
-calling `FindFirstFileW` with a richer pattern got nothing back. Now full Win32
-semantics: `*` matches any run including an empty one, `?` matches exactly one
-character, ASCII case-insensitive. Character classes (`[ab]`) are still not
-implemented — Win32 does not support them either, so this is parity, not a gap.
+calling `FindFirstFileW` with a richer pattern got nothing back. The patch
+implements full Win32 semantics: `*` matches any run including an empty one, `?`
+matches exactly one character, ASCII case-insensitive. Character classes (`[ab]`)
+are still not implemented — Win32 does not support them either, so this is
+parity, not a gap.
 
-**Verification.** `~/tmp/test_modfix.c` exercises both converters and the matcher
-against 24 assertions: ASCII, CJK, Latin-1 (`café`), an emoji surrogate pair,
+**None of the three is in the repository.** All three are a patch: written,
+unit-tested, and then reverted. The source still carries the original
+`#define FIND_MAX 8`, the byte-wise converters, and the two-form matcher.
+
+**Verification (of the patch, not of the repository).** `test_modfix.c` exercises
+both converters and the matcher against 24 assertions: ASCII, CJK, Latin-1 (`café`), an emoji surrogate pair,
 lone surrogates, malformed bytes with recovery, `maxchars` truncation and buffer
 bounds, plus `*`, `*.*`, `*.xml`, `?`, multiple stars, case folding, exact match
 and CJK names. All pass. Both the English and the Chinese tree compile to a
@@ -468,9 +485,9 @@ of behavioural equivalence. Say so plainly when reporting bugs.
 | Dense rooms drop frames | known, root cause located | `PITFALLS.md` §10 (gl4es `ToBuffer` gated on `vao->locked==1`), `README.md` | not addressed; the fix was described but never applied |
 | Version lock to 1.7.9b (J835) | by construction | `BUILD_SPEC` gate | re-derive for a new patch |
 | Mod compatibility | **host layer fixed, never device-tested** | 4a items repaired, 24 unit assertions pass | push to `game/libisaac.so`, then one instrumented run per mod |
-| Non-ASCII mod names | **fixed 2026-11-27** | complete UTF-8 ⇄ UTF-16, surrogate pairs, U+FFFD | device check pending |
-| 8 concurrent dir handles | **fixed 2026-11-27** | `FIND_MAX 8` → 32 | device check pending |
-| Wildcards beyond `*` / `*.ext` | **fixed 2026-11-27** | full Win32 semantics (`*`, `?`, case folding) | device check pending; character classes are out of scope on Win32 too |
+| Non-ASCII mod names | **patch written, NOT in the repo** | complete UTF-8 ⇄ UTF-16, surrogate pairs, U+FFFD; 24 assertions pass off-device | reapply, then device check |
+| 8 concurrent dir handles | **patch written, NOT in the repo** | source still has `FIND_MAX 8` | reapply, then device check |
+| Wildcards beyond `*` / `*.ext` | **patch written, NOT in the repo** | full Win32 semantics (`*`, `?`, case folding) | reapply, then device check; character classes are out of scope on Win32 too |
 | 151 functions not fully translated | measured census | 14,920 / 109 / 42 of 15,071 | `grep guest_fault` per run |
 | 20 untranslated instructions (MMX/SSE, incl. `popfd`) | measured census | `BUILD_SPEC` §7 | on referenced paths, not reached in normal play |
 | x87 modelled as `double` | gap known, fix verified | 331 arith sites; `long double` = binary128 | change `st[8]` + 4 helpers, rebuild, then profile |
@@ -610,9 +627,9 @@ this archive:
 
 | What | Where | Status |
 |---|---|---|
-| Non-ASCII file/mod names corrupted | `u16_to_u8()`, `u8_to_u16()` | **fixed 2026-11-27** — complete UTF-8 ⇄ UTF-16; 24 assertions pass |
-| Only 8 concurrent directory handles | `#define FIND_MAX` | **fixed 2026-11-27** — raised to 32 |
-| Wildcards limited to `*` / `*.ext` | `name_matches()` | **fixed 2026-11-27** — full Win32 semantics |
+| Non-ASCII file/mod names corrupted | `u16_to_u8()`, `u8_to_u16()` | **patch exists, not applied** — the repo still has the byte-wise version |
+| Only 8 concurrent directory handles | `#define FIND_MAX` | **patch exists, not applied** — source still reads 8 |
+| Wildcards limited to `*` / `*.ext` | `name_matches()` | **patch exists, not applied** — source still supports only the two simple forms |
 
 Actual cost: about 40 minutes including the test, then a compile (0.06 s) and a
 link (3.1 s on a hot device). Both trees produce a **byte-identical 55496-byte
