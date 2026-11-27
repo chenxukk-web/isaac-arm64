@@ -31,7 +31,7 @@ AI-written**, and point anyone who distrusts that at the upstream spec instead.
 
 ## 0. Title
 
-Do not write "How to port" — this archive is a finished-and-abandoned port plus
+Do not write "How to port" — this archive is a finished port that is no longer developed, plus
 its records, not a tutorial, and a tutorial-shaped title guarantees the first
 reply is "where's the tutorial". Keep the docs tag if the forum uses one, and
 spell out the game name: nobody searches for "Tboi".
@@ -133,13 +133,14 @@ either, and I would rather say that up front than let people discover it.
   BUILD_SPEC_FOR_AGENTS.md S6 lists every -I you need.
 
 -- Who this is for --
-The original author has stopped maintaining this. It is released in this state
+The original author no longer develops this — the author still tests it and
+records the pitfalls and bugs. It is released in this state
 for others to pick up. If you want a turnkey APK, this is not it and I would
 rather you know now. If you want a working, heavily documented starting point
 for static recompilation on Android — including the routes that do not work
 and why — this is a good one.
 
--- Why it stopped, honestly --
+-- Why development stopped, honestly --
 Not lack of interest, and not because the remaining work looked hard. The whole
 port was built on ONE Android phone running Termux — no PC, no CI. Every change
 meant a full rebuild of all 192 translation units (10-20 min, 208 MB of

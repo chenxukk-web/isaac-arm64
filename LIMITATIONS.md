@@ -479,7 +479,7 @@ of behavioural equivalence. Say so plainly when reporting bugs.
 
 Section 8 turns the actionable rows into a work list: exact file and line, what
 the change costs to build, and the order that makes each step independently
-verifiable. It opens with **§8.0, why the project was abandoned** — the short
+verifiable. It opens with **§8.0, why development stopped** — the short
 version is iteration cost on phone-only hardware, not the difficulty of the work,
 and that matters if you are deciding whether to pick it up.
 
@@ -530,7 +530,7 @@ why it was not done.
 The maintainer will not validate any of this. Treat every number here as a
 starting estimate from one device, not a promise.
 
-### 8.0 Why the project was abandoned
+### 8.0 Why development stopped
 
 **Not for lack of interest, and not because the remaining work looked hard. It
 stopped because the edit-build-test loop cost too much wall-clock time on the

@@ -46,17 +46,20 @@ what you measure, trust your measurement.
 
 ---
 
-> **Maintenance status: the original author has stopped maintaining this.**
+> **Maintenance status: the original author no longer develops this.**
 > It is released in this state for others to take over, build, and improve.
-> Everything below is a measured snapshot from one point in time, not a promise.
+> What the author still does is **test it — hunting for pitfalls and bugs — and
+> record what turns up in this archive**. No new features and no fixes are
+> planned. Everything below is a measured snapshot from one point in time, not a
+> promise.
 >
-> **Why it stopped:** the entire port was built on one Android phone running
-> Termux — no PC, no CI. Every change meant a full rebuild of all 192 translation
-> units (10-20 minutes), followed by a hand-installed APK and a manual test.
-> One iteration cost 20-30 minutes of mostly waiting, and the two remaining
-> defects each needed many iterations. `LIMITATIONS.md` §8.0 has the details.
-> **On a desktop this project is very different** — that rebuild is a couple of
-> minutes and ADB replaces the hand-install.
+> **Why development stopped:** the entire port was built on one Android phone
+> running Termux — no PC, no CI. Every change meant a full rebuild of all 192
+> translation units (10-20 minutes), followed by a hand-installed APK and a
+> manual test. One iteration cost 20-30 minutes of mostly waiting, and the two
+> remaining defects each needed many iterations. `LIMITATIONS.md` §8.0 has the
+> details. **On a desktop this project is very different** — that rebuild is a
+> couple of minutes and ADB replaces the hand-install.
 >
 > **Authorship:** every document in this archive was written by an AI, across
 > many sessions, from device logs and source. That includes this README,
@@ -78,8 +81,9 @@ what you measure, trust your measurement.
 **This archive contains no game and no game resources.** You must supply your own
 legitimate copy of *The Binding of Isaac: Repentance*.
 
-This project is provided **"as is"**, with no warranty. The original author has
-stopped maintaining it and provides no support.
+This project is provided **"as is"**, with no warranty. The original author no
+longer develops it and provides no support; the author's remaining involvement is
+testing, and what that testing finds is recorded in this archive.
 
 Using a modified client **may** violate the game's EULA or Steam's Subscriber
 Agreement, and could invalidate achievements, cause cloud-save conflicts, or
@@ -95,7 +99,7 @@ advice; consult a lawyer before redistributing or using commercially.
 
 If you read one file, read that one: it is a single-page overview — what the port
 is, what was layered on top of upstream, the architecture in one paragraph,
-measured state, known defects, what is unverified, why it was abandoned, and what
+measured state, known defects, what is unverified, why development stopped, and what
 you need to build it. It is written for someone arriving cold.
 
 The rest of this README assumes you already know what the project is.

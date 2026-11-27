@@ -26,10 +26,12 @@ This project is provided **"as is"**, without warranty of any kind, express or
 implied, including but not limited to the warranties of merchantability, fitness
 for a particular purpose and non-infringement.
 
-The original author has **stopped maintaining** this project and provides no
-support, no updates and no guarantee of fixes. The two known defects (some UI
-atlases uploading empty; frame drops in dense rooms) are documented as
-**unresolved**. Do not read them as promised fixes.
+The original author **no longer develops** this project and provides no support,
+no updates and no guarantee of fixes. The author's remaining involvement is
+testing — looking for pitfalls and bugs — with the findings recorded in this
+archive rather than fixed. The two known defects (some UI atlases uploading
+empty; frame drops in dense rooms) are documented as **unresolved**. Do not read
+them as promised fixes.
 
 ## 3. Use at your own risk
 
@@ -78,10 +80,11 @@ conflicts, or restrict your account.
 consequences. If your account matters to you, test with a separate account or in
 offline mode.
 
-## 7. Unmaintained
+## 7. Not developed further
 
-The original author no longer follows this project. The documentation, code and
-criteria here are a **snapshot in time**. Upstream dependencies (gl4es, Lua,
+The original author no longer develops this project; what the author does still
+do is test it and record the pitfalls and bugs that turn up. The documentation,
+code and criteria here are a **snapshot in time**. Upstream dependencies (gl4es, Lua,
 OpenAL) may have moved on and may no longer be compatible.
 
 Anyone taking over may change things freely, but owns the verification burden:

@@ -2,8 +2,9 @@
 
 > **This is the most valuable document in the project.**
 > Every entry was actually hit, with the evidence recorded (addresses, logs, numbers).
-> The original author has stopped maintaining this — if you run into trouble,
-> check here first; someone probably already paid for that lesson.
+> The original author no longer develops this, but still tests it and records
+> what breaks — if you run into trouble, check here first; someone probably
+> already paid for that lesson.
 >
 > Ordered by **cost**: the earlier entries consumed hours to days, the later ones
 > tens of minutes.

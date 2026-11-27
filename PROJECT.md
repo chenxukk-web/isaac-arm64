@@ -64,7 +64,7 @@ the x86 binary to native ARM64**. Different technical routes to the same goal.
 
 So: if your question is "how do I play Isaac on my phone", the answer is their
 project, not this one. This one is worth reading only if you care how the
-recompilation route works — and it stops at source, because it was abandoned.
+recompilation route works — and it stops at source, because development stopped.
 
 ## 2. What was added on top of upstream
 
@@ -158,7 +158,7 @@ so if you hit one the instruction name lands directly in the log.
 
 ---
 
-## 7. Why it was abandoned
+## 7. Why development stopped
 
 **Iteration cost, not difficulty.** The entire port was built on one Android phone
 running Termux — no PC, no CI. Every change meant recompiling all 192 translation
