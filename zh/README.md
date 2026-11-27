@@ -7,9 +7,12 @@
 **现状：能启动、能玩、能打——但有两个看得见的缺陷。** 142 个采样中位帧率
 56.9 fps；HUD 字体图集上传失败，密集房间会掉帧。两个根因都写在下面。
 
-**发布：** [v0.1.0-alpha](https://github.com/chenxukk-web/isaac-arm64/releases/tag/v0.1.0)
+**发布：** [v0.1.1-alpha](https://github.com/chenxukk-web/isaac-arm64/releases/tag/v0.1.1-alpha)
 ——仅有源码，预发布。GitHub 侧栏对预发布只显示 `1 tag` 并链到 `/tags`
 而不是 `/releases`，所以要看发布说明请走这个链接。
+
+> **用 `v0.1.0` 构建出的 `.so` 无法启动**——它的 `host_main.c` 里是 app 沙箱
+> 读不到的 Termux 绝对路径。已在 `v0.1.1-alpha` 修好；用那个 tag，不要用 `v0.1.0`。
 
 ## 在手机上是什么样子
 
