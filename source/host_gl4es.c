@@ -166,6 +166,17 @@ static int      g_iv_pending;
 unsigned g_tex_w[TEX_INFO_N], g_tex_h[TEX_INFO_N];
 unsigned char g_tex_seen[TEX_INFO_N];
 
+/* ★★ 2026-11-27: which SetTexelData call site is in flight, and what it produced.
+ *
+ * host_settexel_probe() (further down) records the caller at SetTexelData entry.
+ * The glTexImage2D wrapper is the only place that sees the authoritative width,
+ * height, format and pixel pointer, so the two halves are joined there. Previously
+ * the probe tried to read the size out of the image object itself, at +0x80/+0x84,
+ * which is past the end of KAGE_Graphics_ImageBase (it closes at : 0x80). */
+static unsigned long g_pending_settexel_ret;   /* 0 = none outstanding */
+static int           g_pending_settexel_tick;
+static const char   *settexel_site_name(unsigned long callret);
+
 /* ★★ 2026-11-10: the **final** content state of every texture.
  *
  * The old texstat counted all-zero by **call**, but the same id may first be uploaded as an empty placeholder
@@ -477,6 +488,7 @@ static void gl4es_fbsize(int *w, int *h)
 int host_gl4es_init(int width, int height)
 {
     if (g_gl_ready) return g_gl_ready > 0 ? 0 : -1;   /* idempotent */
+
     /* ★ pass 0 = do not override (in window mode host_gl4es_set_fb_size already set the size) */
     if (width > 0)  g_fb_w = width;
     else if (g_fb_w <= 0) g_fb_w = 1280;
@@ -2038,17 +2050,29 @@ int host_gl_dynamic(CPU *__restrict c, uint32_t addr)
                             uint64_t tot = npix * 4ull, nzb = 0;
                             if (tot > (64ull << 20)) tot = 64ull << 20;  /* 64MB cap */
                             for (uint64_t i = 0; i < tot; i++) if (q[i]) nzb++;
+                            /* ★★ 2026-11-27: attribute this upload to the SetTexelData call
+                             * site recorded at entry. "from" is the authoritative answer to
+                             * "which loader produced this all-zero texture"; the size comes
+                             * from the glTexImage2D arguments here, not from the image object
+                             * (whose +0x80/+0x84 reads were past the end -- the struct that
+                             * every image in this game uses closes at : 0x80). */
                             fprintf(stderr,
-                                "[zerotex] id=%u %ux%u ptr=%08x ret=%08x "
-                                "nonzero bytes=%llu/%llu first16="
+                                "[zerotex] id=%u %ux%u ptr=%08x ret=%08x from=%s "
+                                "caller=%08lx nonzero=%llu/%llu first16="
                                 "%02x%02x%02x%02x%02x%02x%02x%02x"
                                 "%02x%02x%02x%02x%02x%02x%02x%02x\n",
                                 g_cur_tex_id, gs32(c,3), gs32(c,4), px,
                                 ld32(c->esp),
+                                g_pending_settexel_ret
+                                    ? settexel_site_name(g_pending_settexel_ret) : "-",
+                                g_pending_settexel_ret,
                                 (unsigned long long)nzb, (unsigned long long)tot,
                                 q[0],q[1],q[2],q[3],q[4],q[5],q[6],q[7],
                                 q[8],q[9],q[10],q[11],q[12],q[13],q[14],q[15]);
                             fflush(NULL);
+                            /* One upload, one attribution: clear so the next upload cannot
+                             * inherit a stale caller if it arrives without a probe. */
+                            g_pending_settexel_ret = 0;
                         }
                         /* The old zerotex (with the fread check) is kept below,
                          * but it prints only when the quota above did not use it up. */
@@ -2976,20 +3000,34 @@ void host_tex_dump_ppm(uint32_t id, uint32_t w, uint32_t h,
 /* ★★ 2026-11-12: SetTexelData caller attribution (local diagnostics).
  * 6 call sites: 0x5a153b=ImagePng, 0x5a0b1d, 0x5a1a18, 0x5a1e9e,
  *             0x5b606e=solid fill, 0x5b61bb
- * The font atlas is all zero; we must know which path it takes. */
+ * The font atlas is all zero; we must know which path it takes.
+ *
+ * ★★ 2026-11-27: this probe used to read the image width and height from
+ * `img + 0x80` / `img + 0x84`. Both reads are **out of bounds**: REPENTOGON's
+ * `.zhl` layout closes KAGE_Graphics_ImageBase (which is ImagePlatformBase for
+ * every image in this game) at `: 0x80`, with the last named field at `+0x5c`.
+ * Width and height are only reachable through the GetWidth/GetHeight vtable
+ * slots, so every size this probe printed was whatever happened to follow the
+ * object -- and the "only 16..131072 pixels" filter below was therefore
+ * deciding what to log from garbage. That is a likely reason 4 of the 6 sites
+ * appeared to have a count of 0.
+ *
+ * The probe now records only **who called**, and the exact size is taken from
+ * the glTexImage2D arguments inside the wrapper, which are authoritative. */
 void host_settexel_probe(uint32_t callret, uint32_t img)
 {
-    static const uint32_t sites[6] = { 0x5a153bU, 0x5a0b1dU, 0x5a1a18U,
-                                       0x5a1e9eU, 0x5b606eU, 0x5b61bbU };
+    (void)img;   /* deliberately not dereferenced -- see above */
+    g_pending_settexel_ret  = callret;
+    g_pending_settexel_tick = 0;
+}
+
+/* Name a known SetTexelData call site, or "unknown". */
+static const char *settexel_site_name(unsigned long callret)
+{
+    static const unsigned long sites[6] = { 0x5a153bUL, 0x5a0b1dUL, 0x5a1a18UL,
+                                            0x5a1e9eUL, 0x5b606eUL, 0x5b61bbUL };
     static const char *names[6] = { "ImagePng", "5a0b1d", "5a1a18",
                                     "5a1e9e", "solid fill", "5b61bb" };
-    uint32_t w = img >= 0x10000u ? ld32((uint32_t)(img + 0x80U)) : 0u;
-    uint32_t h = img >= 0x10000u ? ld32((uint32_t)(img + 0x84U)) : 0u;
-    /* Only UI/font sizes matter; this avoids flooding the log */
-    if (!((uint64_t)w * h <= 131072ull && w >= 16u && h >= 16u)) return;
-    int k = -1;
-    for (int i = 0; i < 6; i++) if (sites[i] == callret) { k = i; break; }
-    fprintf(stderr, "[settexel] %ux%u from %s (ret=%08x)\n",
-            w, h, k >= 0 ? names[k] : "unknown", callret);
-    fflush(NULL);
+    for (int i = 0; i < 6; i++) if (sites[i] == callret) return names[i];
+    return "unknown";
 }

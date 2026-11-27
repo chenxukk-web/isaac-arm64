@@ -561,7 +561,23 @@ int main(int argc, char **argv) {
            host_crt_file_count(), host_crt_time_count(), host_sys_count());
 
 
-    const char *pe = "/data/data/com.termux/files/home/work/analysis/isaac-ng.exe.unpacked";
+    /* ★★ 2026-11-27: the PE path must work inside the app sandbox.
+     *
+     * This used to be the absolute Termux path, and build_apk.sh / push_elf.sh
+     * patched it to "./isaac-ng.exe.unpacked" as a post-link binary replace. A
+     * build that skipped that step -- linking obj_pic/ directly, for example --
+     * shipped a .so that could not start at all: /data/data/com.termux is mode
+     * 0700 owned by the Termux uid, so the game process (a different uid) cannot
+     * even traverse it. guest_image_load() then failed and printed its only
+     * message to stdout, which the in-process logger does not capture, so the app
+     * opened and dropped straight back to the launcher with a nearly empty log.
+     *
+     * The relative path is the default now: the JNI layer chdir()s into the game
+     * directory before main() runs. ISAAC_PE overrides it for PC/CLI testing. */
+    const char *pe = getenv("ISAAC_PE");
+    if (!pe || !*pe) pe = "./isaac-ng.exe.unpacked";
+    fprintf(stderr, "[boot] PE path = %s\n", pe);
+    fflush(NULL);
 
     guest_register_all_imports();
     /* Probe only in in-process mode (or when explicitly requested): in child-process mode
@@ -573,12 +589,15 @@ int main(int argc, char **argv) {
             probe_low4g();
     }
     if (guest_image_load(pe) != 0) {
-        puts("image load failed");
+        /* stderr, not stdout: the in-process logger does not capture stdout, so a
+         * failed load used to leave an empty log and look like a silent exit. */
+        fprintf(stderr, "[boot] image load failed for '%s'\n", pe);
+        fflush(NULL);
         /* when loading fails the layout must be printed regardless -- it is the entire evidence base */
         probe_low4g();
         return 1;
     }
-    printf("✓ image loaded base=0x%08x\n", (unsigned)GUEST_IMAGE_BASE);
+    fprintf(stderr, "[boot] image loaded base=0x%08x\n", (unsigned)GUEST_IMAGE_BASE);
     host_boot_mark("PE image loaded");
     /* GL backend: the EGL context must exist before any guest GL call.
      * Runs offscreen on a pbuffer; the APK stage swaps in the SurfaceView window surface.
