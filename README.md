@@ -1,46 +1,9 @@
-# Isaac: Repentance → Android arm64
+# The Binding of Isaac: Repentance — Android arm64 Static Recompilation
 
 A full static recompilation of the PC engine of *The Binding of Isaac:
 Repentance* (x86 PE32) into native Android arm64 code. **Not an emulator** —
 15,071 x86 functions are translated to C at build time and cross-compiled into
 a native `.so`.
-
-**Status: it boots, plays, and fights — with two visible defects.** Frame rate is
-56.9 fps median over 142 samples; the HUD font atlas fails to upload, and dense
-rooms drop frames. Both root causes are documented below.
-
-**Release:** [v0.1.0-alpha](https://github.com/chenxukk-web/isaac-arm64/releases/tag/v0.1.0)
-— source only, pre-release. GitHub's sidebar shows `1 tag` for a pre-release and
-links to `/tags`, not `/releases`, so use this link to reach the release notes.
-
-## What it looks like on a phone
-
-<img src="docs/screenshots/room-running-20261113.webp" width="720" alt="Seven seconds on device: the player walks to a door and changes rooms">
-
-Seven seconds captured on device. The player walks, changes rooms, and the frame
-rate moves between 44 and 58 fps. Two defects are visible the whole time: every
-HUD counter reads `µ` instead of a number, and `starting...` never hides.
-
-| 2026-11-06 build (HUD working) | 2026-11-13 build (HUD broken) |
-|---|---|
-| <img src="docs/screenshots/room-20261106-ok.png" width="430"> | <img src="docs/screenshots/room-20261113-defect.jpg" width="430"> |
-| HUD counters render: `00 01 00` | Every HUD counter is `µ` — defect #1 |
-| Same room type, same device | `starting...` never hides; 38 fps, 95% CPU in this frame |
-
-Both frames come from the same phone (Adreno 830 / Android 17). The room, the
-sprites and the player render correctly in both — what regressed between them is
-the font atlas upload, not the renderer.
-
-**3-minute demo on a real device:** https://youtu.be/V-F3hw618yU
-
----
-
-**How this was made:** AI-assisted throughout, directed by a human who ran every
-device test. Documents and code changes were written by an AI from logs and
-source; no AI ever installed this on a device. If a claim here conflicts with
-what you measure, trust your measurement.
-
----
 
 > **Maintenance status: the original author has stopped maintaining this.**
 > It is released in this state for others to take over, build, and improve.
@@ -124,6 +87,21 @@ time (addresses, logs, numbers):
 
 ---
 
+## ★ Startup time has its own document
+
+`STARTUP_AND_ARCHIVES.md` covers the one measured performance question that is
+fully understood: where the ~17.5 s of startup goes, the `ARCH000` container
+format recovered from the retail archives, and a repack that cuts startup to
+**8 s** — measured — but crashes on a pre-existing memory bug that the change in
+file sizes exposes.
+
+It also documents that **nothing is cached**: every start re-inflates the same
+1.2 GB as translated x86, at 7x the cost of native zlib.
+
+Read it if you intend to touch startup, archives, or the resource layer.
+
+---
+
 ## ★ Then read `LIMITATIONS.md`
 
 `PITFALLS.md` records what was **hit and solved**. `LIMITATIONS.md` records what
@@ -176,15 +154,12 @@ replaced — no reinstall.
 | Playability | Playable — see the frame-rate row below |
 | Frame rate | **median 56.9 fps** over 142 `[perf]` samples (p10 43.6, max 60.4). The 58-60 fps figure below came from an earlier build. |
 | Crashes | None in the current build (measured to frame 8400, SEGV count 0). Two `std::bad_alloc` aborts happened *before* the 2026-11-10 heap-cap change — see `LIMITATIONS.md` §2. |
-| Startup | ~18.7 s |
+| Startup | **~17.5 s, of which ~all is `inflate()` as translated x86** (16.4-21.2 s across runs). Native zlib does the same 1.2 GB in 2.5 s. No cache between starts — see `STARTUP_AND_ARCHIVES.md` |
 | Verified device | **Adreno 830 / Android 17** (Snapdragon 8 Elite class, this one device only) |
 | GL | gl4es 1.1.7, GL 2.1 → GLES 2.0 |
+| Mod loading | **Host layer fixed 2026-11-27, never run on a device.** The three defects that broke every mod independently — non-ASCII names, 8 directory handles, `*`/`*.ext`-only wildcards — are repaired and unit-tested (§4a of `LIMITATIONS.md`). No mod has actually been loaded. |
 
 **Verified on exactly one device.** Other GPUs are unknown.
-
-**Demo recording (3 min, real device):** https://youtu.be/V-F3hw618yU
-— recorded on the device above. It shows the defects in §"Two known defects"
-exactly as they look: HUD digits rendering as `µ`, blank menu list.
 
 A 58-60 fps best case was measured on a build from before 2026-11-12. The current
 build carries diagnostic probes added that day and measures slower; §3 of
@@ -243,13 +218,71 @@ confirmed real defect is the font atlas:
 [alphachk] id=83 512x128 rgb_nonzero=0 alpha_nonzero=0 -> decoder wrote nothing (all zero)
 ```
 
-Six hypotheses have been ruled out (the data layer was compared byte-for-byte
-against an independent PNG decoder: 65062 == 65062 non-zero bytes, proving
-decoding is completely correct).
+The data layer was compared byte-for-byte against an independent PNG decoder:
+65062 == 65062 non-zero bytes, so decoding is correct.
 
-**Current lead**: the font atlas uploads with return address `0x5b0a13`, but it
-is **not** among the 6 known `SetTexelData` call sites (4 of those 6 have a
-count of 0). So there is a seventh path that has never been instrumented.
+**Correction (2026-11-27): there is no seventh path.** Earlier notes in this
+archive claimed the font atlas uploads through an un-instrumented site because
+its recorded return address `0x5b0a13` did not match any of the 6 known
+`SetTexelData` call sites. That was a misreading of what the diagnostic records:
+`0x5b0a13` is not a caller of `SetTexelData`, it is the return address of the
+`glTexImage2D` call **inside** it:
+
+```
+sub_005b0920  (this is SetTexelData itself; ecx = ImagePlatformBase*)
+  005b092e  mov eax, [esi+0x18]      ; pixel format enum -> GL_LUMINANCE/RGB/RGBA
+  005b0952  lea edi, [esi+0x78]      ; GL texture id
+  005b0a0d  call glTexImage2D
+  005b0a13  ...                       ; <- this is what the log printed
+```
+
+So the upload path was known all along; the open question is the data it is
+handed, not the route it takes.
+
+**A wrong turn, recorded so it is not repeated.** Based on REPENTOGON's `.zhl`,
+`KAGE_Graphics_ImageBase` closes at `: 0x80`, so the width and height read from
+`img+0x80` / `img+0x84` look like an out-of-bounds read, and that is what an
+earlier revision of this file claimed. **It is not.** Disassembling the
+`ImageSolid` constructor settles it:
+
+```
+sub_005b5e40  (ImageSolid: fill a w*h buffer with one colour, `rep stosd`)
+  005b5e91  mov [ebx+0x80], ecx      ; this->width
+  005b5e97  mov [ebx+0x84], edx      ; this->height
+  005b5e9d  mov [ebx+0x88], ecx      ; this->paddedWidth  (clamped to >= 8)
+  005b5ea3  mov [ebx+0x8c], edx      ; this->paddedHeight
+```
+
+The `.zhl` only describes the base class; the concrete image objects this game
+builds are larger, and `+0x80..+0x8c` are real fields. The probe's reads were
+correct.
+
+**What the improved probe did establish (2026-11-27, on device):** every
+all-zero upload is attributed, and the attribution changes the picture.
+
+```
+[zerotex] id=83 512x128 from=solid fill caller=005b606e nonzero=0/262144
+[alphachk] id=83 rgb_nonzero=0 alpha_nonzero=0
+```
+
+- `caller=005b606e` is inside `sub_005b5e40` — the **ImageSolid constructor**,
+  not a PNG decoder. Of 39 attributed all-zero uploads, 31 come from this path.
+- Most of them are legitimate: a solid image filled with transparent black *is*
+  all zero. Only three all-zero textures are ever drawn (ids 11, 13, 95), and
+  the previous "20% of textures are broken" figure was counting placeholders as
+  failures — the same mistake as the 2026-11-10 revision.
+- The one texture that matters, `id=83 512x128`, is the **only 512x128 upload in
+  the whole run**, which is exactly the size of `teammeatfont16_0.png`. The PNG
+  on disk is intact (verified by decoding it), yet nothing ever fills the
+  texture afterwards: `glTexSubImage2D` is called zero times, and the re-upload
+  repair path is off by design.
+
+**So the open question is narrower than before:** the game creates an empty
+512x128 solid for the font atlas and never populates it. Either the decoder step
+is skipped, or it writes somewhere else. The next measurement should print the
+arguments `sub_005b5e40` receives (width, height, fill count, colour, caller),
+which separates "intentional transparent placeholder" from "should have been
+replaced and was not".
 
 ### 2. Frame drops in dense rooms
 
@@ -367,14 +400,11 @@ build artifacts.
 
 ## Source language status (2026-11-12)
 
-This project ships **two source trees** that build to functionally identical
+This archive ships **two source trees** that build to functionally identical
 `.so` files — comments never enter the artifact:
 
-- **the repository root** (English) — English throughout wherever it matters.
-- **`zh/`** — identical code, Chinese working notes.
-
-(The release archive splits them into `isaac-arm64-en/` and `isaac-arm64-zh/`
-instead; the contents are the same.)
+- `isaac-arm64-en/` (this one) — English throughout wherever it matters.
+- `isaac-arm64-zh/` — identical code, Chinese working notes.
 
 Verified by compiling the same file both ways (`clang -O2 -fPIC`) and comparing
 object files: every file translated in the second pass produces a
@@ -408,7 +438,7 @@ comment lines) are fully translated — `host_gl4es.c` (721), `host_user32.c`
 Checked mechanically, not by eye:
 
 ```
-cd <repo-or-archive>/            # the English tree
+cd isaac-arm64-en
 grep -rlP '[\x{4e00}-\x{9fff}]' .      # no output
 ```
 

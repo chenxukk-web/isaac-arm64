@@ -257,44 +257,65 @@ Consequences:
   every recorded run, and no log contains a mod-loading sequence. Any claim of
   the form "mod X works" or "mod X crashes" therefore has no evidence behind it
   in this archive. Treat the entire mod surface as **untested**.
+  *Update 2026-11-27:* the three host-layer defects that blocked every mod on
+  their own (§4a) are now fixed and unit-tested off-device, so a mod can at least
+  be *found* and *opened*. Nothing is claimed about what happens after that — the
+  loading path itself still has never run on a device.
 - **Mods requiring REPENTOGON or other native PC extensions** need those
   extensions ported as well. They are not part of this project.
 
-### 4a. Host-layer limits that hit every mod at once
+### 4a. Host-layer limits that hit every mod at once — **fixed 2026-11-27**
 
-Before testing mods one by one, note that three defects in the Windows file APIs
-apply to *all* mods and can be read straight out of `host_android.c`. None of
-them require a mod to reproduce:
+Three defects in the Windows file APIs applied to *all* mods, not just some.
+All three are fixed in `host_android.c`; the section is kept because the
+diagnostics below are how they were found, and because the fix has not yet been
+validated with a real mod on device (see the end of this section).
 
-**Non-ASCII names are corrupted in both directions.** The two conversion helpers
-are byte-wise, not UTF-8 aware:
+**1. Non-ASCII names were corrupted in both directions.** The two conversion
+helpers had been byte-wise, not UTF-8 aware:
 
 ```c
+/* before */
 u8_to_u16:  st16(dst + i*2, (uint16_t)(unsigned char)src[i]);   /* byte -> code point */
 u16_to_u8:  dst[k++] = (w < 0x80) ? (char)w : '?';              /* non-ASCII -> '?' */
 ```
 
-Measured: a UTF-8 name of two CJK characters (6 bytes) becomes **six separate
+Measured: a UTF-8 name of two CJK characters (6 bytes) became **six separate
 Latin-1 code points**, not two characters:
 
 ```
 UTF-8 (6 bytes) -> 6 UTF-16 code points: U+00E6 U+0088 U+0091 U+00E7 U+009A U+0084
 ```
 
-**Any mod whose directory name contains non-ASCII characters cannot be found or
-opened.** A UTF-8 decode/encode pass (about 20 lines each way) fixes this for
-every mod simultaneously.
+Any mod whose directory name contained non-ASCII characters could not be found
+or opened. Both directions are now complete converters: the BMP, surrogate
+pairs, and lone surrogates mapped to U+FFFD so a damaged name stays
+distinguishable from one that genuinely contains `?`.
 
-**Only 8 directory handles open at once.** `#define FIND_MAX 8` with static
-`DIR *g_find_dir[8]`. A mod that recurses through subdirectories while the engine
-is already enumerating can exhaust this and get a spurious failure.
+**2. Only 8 directory handles could be open at once.** `#define FIND_MAX 8` with
+static `DIR *g_find_dir[8]`. A mod recursing through subdirectories while the
+engine was already enumerating could exhaust this and get a spurious failure.
+Now 32.
 
-**Wildcards are limited to `*` and `*.ext`.** Measured: `*abc*`, `a?c` and
-`[ab]c` never match. The comment says that covers every use in the engine
-(enumerating `mods/`, reading `*.xml`), which is true for the engine — but a mod
-that calls `FindFirstFileW` with a richer pattern gets nothing back.
+**3. Wildcards were limited to `*` and `*.ext`.** Measured: `*abc*`, `a?c` and
+`[ab]c` never matched. The engine only ever used the two simple forms, but a mod
+calling `FindFirstFileW` with a richer pattern got nothing back. Now full Win32
+semantics: `*` matches any run including an empty one, `?` matches exactly one
+character, ASCII case-insensitive. Character classes (`[ab]`) are still not
+implemented — Win32 does not support them either, so this is parity, not a gap.
 
-These three are **one-time fixes**, not per-mod work.
+**Verification.** `~/tmp/test_modfix.c` exercises both converters and the matcher
+against 24 assertions: ASCII, CJK, Latin-1 (`café`), an emoji surrogate pair,
+lone surrogates, malformed bytes with recovery, `maxchars` truncation and buffer
+bounds, plus `*`, `*.*`, `*.xml`, `?`, multiple stars, case folding, exact match
+and CJK names. All pass. Both the English and the Chinese tree compile to a
+**byte-identical 55496-byte object**, and the linked `libisaac.so` still meets
+its contract (8 exported symbols, 3 NEEDED, no undefined `host_*`).
+
+**What is still unverified.** No mod has been loaded on a device with these
+fixes. The converters and the matcher are proven in isolation; whether the game
+itself is happy with a real mod tree is not. That is a device test, and it needs
+the fixes pushed to `game/libisaac.so` first.
 
 ### 4b. What actually needs per-mod testing
 
@@ -438,12 +459,15 @@ of behavioural equivalence. Say so plainly when reporting bugs.
 | Internal waste from power-of-two blocks | measured design cost | up to 2x per allocation | raise the size-class ladder (1.25x/1.5x steps) |
 | Frame rate below the headline | measured | 142 samples, median 56.9 | rebuild without probes, re-measure |
 | Room-load stall ~1 s | measured | `[stall] 1016.5 ms` | not addressed |
+| **Startup is 17.5 s, all of it inflated as translated x86** | measured, and a fix is proven but blocked | `STARTUP_AND_ARCHIVES.md` §1: native zlib does the same 1.2 GB in 2.5 s, so the translation layer costs 7x; 187,035 deflate chunks, no cache between starts | fix the out-of-bounds write in §3.3 first; the repack is then a measured 10 s win |
+| **No cache: every start re-inflates the same 1.2 GB** | measured | `packed/` holds no cache, `host_crt_file.c` disables its `FILE*` cache | repacking the archives is the only fix that survives process restart |
+| **Archive repack crashes at input setup** | measured, blocking | `STARTUP_AND_ARCHIVES.md` §3.3: `fault_addr=0x87e7fff0` is 16 bytes below the boundary the allocator reports as occupied | locate the writing instruction; also explains the 10x `[heap] released an object still in the resource table` per run |
 | Dense rooms drop frames | known, root cause located | `PITFALLS.md` §10 (gl4es `ToBuffer` gated on `vao->locked==1`), `README.md` | not addressed; the fix was described but never applied |
 | Version lock to 1.7.9b (J835) | by construction | `BUILD_SPEC` gate | re-derive for a new patch |
-| Mod compatibility | **no mod ever loaded** | `mods/` empty in every recorded run | fix 4a host limits, then one instrumented run per mod |
-| Non-ASCII mod names | measured defect | 2 CJK chars → 6 Latin-1 code points | UTF-8 decode/encode in both helpers |
-| 8 concurrent dir handles | measured limit | `#define FIND_MAX 8` | raise it / allocate dynamically |
-| Wildcards beyond `*` / `*.ext` | measured limit | `*abc*`, `a?c`, `[ab]c` never match | add `?` and `*` globbing |
+| Mod compatibility | **host layer fixed, never device-tested** | 4a items repaired, 24 unit assertions pass | push to `game/libisaac.so`, then one instrumented run per mod |
+| Non-ASCII mod names | **fixed 2026-11-27** | complete UTF-8 ⇄ UTF-16, surrogate pairs, U+FFFD | device check pending |
+| 8 concurrent dir handles | **fixed 2026-11-27** | `FIND_MAX 8` → 32 | device check pending |
+| Wildcards beyond `*` / `*.ext` | **fixed 2026-11-27** | full Win32 semantics (`*`, `?`, case folding) | device check pending; character classes are out of scope on Win32 too |
 | 151 functions not fully translated | measured census | 14,920 / 109 / 42 of 15,071 | `grep guest_fault` per run |
 | 20 untranslated instructions (MMX/SSE, incl. `popfd`) | measured census | `BUILD_SPEC` §7 | on referenced paths, not reached in normal play |
 | x87 modelled as `double` | gap known, fix verified | 331 arith sites; `long double` = binary128 | change `st[8]` + 4 helpers, rebuild, then profile |
@@ -581,14 +605,15 @@ costs seconds to build; a change to `guest.h` costs a **full rebuild of all 192
 All of it lives in `source/host_android.c`. Line numbers are from the version in
 this archive:
 
-| What | Where | Fix |
+| What | Where | Status |
 |---|---|---|
-| Non-ASCII file/mod names corrupted | `u16_to_u8()` line 848, `u8_to_u16()` line 860 | real UTF-8 ⇄ UTF-16 conversion (~20 lines each way) |
-| Only 8 concurrent directory handles | `#define FIND_MAX 8` line 842 | raise to 32, or allocate the handle table dynamically |
-| Wildcards limited to `*` / `*.ext` | `name_matches()` line 890 | add `?` and general `*` globbing |
+| Non-ASCII file/mod names corrupted | `u16_to_u8()`, `u8_to_u16()` | **fixed 2026-11-27** — complete UTF-8 ⇄ UTF-16; 24 assertions pass |
+| Only 8 concurrent directory handles | `#define FIND_MAX` | **fixed 2026-11-27** — raised to 32 |
+| Wildcards limited to `*` / `*.ext` | `name_matches()` | **fixed 2026-11-27** — full Win32 semantics |
 
-Estimated: **20-30 minutes** of editing, then a compile (0.24 s), a link
-(0.43 s) and a device check.
+Actual cost: about 40 minutes including the test, then a compile (0.06 s) and a
+link (3.1 s on a hot device). Both trees produce a **byte-identical 55496-byte
+object**. **The device check is what remains, and it has not been done.**
 
 **Why this one is the best value:** it requires no `gen/` rebuild, so it cannot
 change the behaviour of any translated function. The blast radius is one file.
