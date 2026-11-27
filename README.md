@@ -188,6 +188,20 @@ replaced — no reinstall.
 
 ---
 
+## Contributing, or taking over
+
+`CONTRIBUTING.md` says what is worth reporting and what is not. Two things in it
+are worth knowing before you spend time:
+
+- **The build has two dependencies the build spec does not mention.** `host_lua.c`
+  needs the Lua 5.3.3 headers, and Termux clang injects a RUNPATH that the
+  contract forbids. `tools/build_and_check.sh` compiles, links, checks all four
+  contract conditions plus the PE path, and strips that RUNPATH — 8 seconds on a
+  phone once `obj_pic/` exists.
+- **A crash at `fault_addr=0x87e7fff0` is not your change.** It is the
+  pre-existing out-of-bounds write described in `STARTUP_AND_ARCHIVES.md` §3.3,
+  and any change large enough to shift the memory layout will trigger it.
+
 ---
 
 ## Current state (measured on device)
